@@ -239,6 +239,79 @@ db.once("open", () => {
       res.status(500).json({ error: "Internal server error" });
     }
   });
+   app.get("/api/getUniqueProducts", async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const size = parseInt(req.query.size) || 10;
+    const skip = (page - 1) * size;
+    try {
+      const pipeline = [{
+        $unwind: "$products"
+      },
+      {
+        $group: {
+          _id: "$products"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          product: "$_id"
+        }
+      },{ $skip: skip }, { $limit: size }];
+
+      const result = await db
+        .collection("accounts")
+        .aggregate(pipeline)
+        .toArray();
+
+      console.log(result);
+      res.json(result);
+    } catch (err) {
+      console.error("Error running aggregation:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
+  ,
+  app.get("/api/getFilteredAccounts", async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const size = parseInt(req.query.size) || 10;
+    const skip = (page - 1) * size;
+    try {
+      const pipeline = [{
+        $unwind: "$transactions"
+      },
+      {
+        $match: {
+          "transactions.amount": {
+            $lt: 5000
+          }
+        }
+      },
+      {
+        $group: {
+          _id: "$account_id"
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          account_id: "$_id"
+        }
+      
+      },{ $skip: skip }, { $limit: size }];
+
+      const result = await db
+        .collection("transactions")
+        .aggregate(pipeline)
+        .toArray();
+
+      console.log(result);
+      res.json(result);
+    } catch (err) {
+      console.error("Error running aggregation:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  })
  
   
   app.listen(port, () => {
